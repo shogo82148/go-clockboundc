@@ -12,46 +12,76 @@ import (
 	"time"
 )
 
+// DefaultSocketPath is the default path for connecting clockboundd.
 const DefaultSocketPath = "/run/clockboundd/clockboundd.sock"
 
+// SocketNamePrefix is the prefix for paths of temporary unixgram sockets.
 const SocketNamePrefix = "clockboundc"
 
+// Bound is a clock error bound.
+// "true time" exists between Earliest and Latest.
 type Bound struct {
 	Earliest time.Time
 	Latest   time.Time
 }
 
+// Header is a header clockboundd returns.
 type Header struct {
-	Version        uint8
-	Type           uint8
+	// The protocol version of this response.
+	Version uint8
+
+	// The response type.
+	Type uint8
+
+	// Unsynchronized true if Chrony is not synchronized. It is false otherwise.
 	Unsynchronized bool
 }
 
+// Now is the current system time with a clock error bound.
 type Now struct {
+	// Time is the current system time without the bound.
 	time.Time
+
+	// Header is the header clockboundd returns.
 	Header Header
-	Bound  Bound
+
+	// Bound is the clock error bound.
+	// "true time" exists between Earliest and Latest.
+	Bound Bound
 }
 
+// Before is the before response from clockboundd.
 type Before struct {
+	// Header is the header clockboundd returns.
 	Header Header
+
+	// Before is true if the requested time happened
+	// before the earliest error bound of the current system time, otherwise false.
 	Before bool
 }
 
+// After is the after response from clockboundd.
 type After struct {
+	// Header is the header clockboundd returns.
 	Header Header
-	After  bool
+
+	// After is true if the requested time happened
+	// after the latest error bound of the current system time, otherwise false.
+	After bool
 }
 
+// Client is a Go implementation of clockboundc.
 type Client struct {
 	local string
 	conn  *net.UnixConn
 }
 
+// New returns a new clockboundc that connects to DefaultSocketPath.
 func New() (*Client, error) {
 	return NewWithPath(DefaultSocketPath)
 }
 
+// NewWithPath returns a new clockboundc that connects to path.
 func NewWithPath(path string) (*Client, error) {
 	raddr, err := net.ResolveUnixAddr("unixgram", path)
 	if err != nil {
@@ -88,6 +118,7 @@ func newSockPath() (string, error) {
 	return filepath.Join(os.TempDir(), name), nil
 }
 
+// Now gets the current system time with the bound.
 func (c *Client) Now() (Now, error) {
 	var buf [20]byte
 	buf[0] = 1 // Version
@@ -126,6 +157,8 @@ func (c *Client) Now() (Now, error) {
 	}, nil
 }
 
+// Before returns whether the requested time happened
+// before the earliest error bound of the current system time.
 func (c *Client) Before(t time.Time) (Before, error) {
 	var buf [12]byte
 	buf[0] = 1 // Version
@@ -156,6 +189,8 @@ func (c *Client) Before(t time.Time) (Before, error) {
 	}, nil
 }
 
+// After returns whether the requested time happened
+// after the latest error bound of the current system time.
 func (c *Client) After(t time.Time) (After, error) {
 	var buf [12]byte
 	buf[0] = 1 // Version
@@ -186,6 +221,7 @@ func (c *Client) After(t time.Time) (After, error) {
 	}, nil
 }
 
+// Close closes the client.
 func (c *Client) Close() error {
 	err := c.conn.Close()
 	if err1 := os.Remove(c.local); err1 != nil && err == nil {
