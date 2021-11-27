@@ -18,6 +18,16 @@ const DefaultSocketPath = "/run/clockboundd/clockboundd.sock"
 // SocketNamePrefix is the prefix for paths of temporary unixgram sockets.
 const SocketNamePrefix = "clockboundc"
 
+// CommandType is a type for requests and responses.
+type CommandType uint8
+
+const (
+	CommandTypeError  CommandType = 0
+	CommandTypeNow    CommandType = 1
+	CommandTypeBefore CommandType = 2
+	CommandTypeAfter  CommandType = 3
+)
+
 // Bound is a clock error bound.
 // "true time" exists between Earliest and Latest.
 type Bound struct {
@@ -31,7 +41,7 @@ type Header struct {
 	Version uint8
 
 	// The response type.
-	Type uint8
+	Type CommandType
 
 	// Unsynchronized true if Chrony is not synchronized. It is false otherwise.
 	Unsynchronized bool
@@ -121,10 +131,10 @@ func newSockPath() (string, error) {
 // Now gets the current system time with the bound.
 func (c *Client) Now() (Now, error) {
 	var buf [20]byte
-	buf[0] = 1 // Version
-	buf[1] = 1 // Command Type: Now (1)
-	buf[2] = 0 // Reserved
-	buf[3] = 0 // Reserved
+	buf[0] = 1                    // Version
+	buf[1] = byte(CommandTypeNow) // Command Type: Now (1)
+	buf[2] = 0                    // Reserved
+	buf[3] = 0                    // Reserved
 	_, err := c.conn.Write(buf[0:4])
 	if err != nil {
 		return Now{}, err
@@ -139,7 +149,7 @@ func (c *Client) Now() (Now, error) {
 	}
 
 	version := buf[0]
-	typ := buf[1]
+	typ := CommandType(buf[1])
 	unsyncFlag := buf[2] != 0
 	earliest := binary.BigEndian.Uint64(buf[4:])
 	latest := binary.BigEndian.Uint64(buf[12:])
@@ -161,10 +171,10 @@ func (c *Client) Now() (Now, error) {
 // before the earliest error bound of the current system time.
 func (c *Client) Before(t time.Time) (Before, error) {
 	var buf [12]byte
-	buf[0] = 1 // Version
-	buf[1] = 2 // Command Type: Before (2)
-	buf[2] = 0 // Reserved
-	buf[3] = 0 // Reserved
+	buf[0] = 1                       // Version
+	buf[1] = byte(CommandTypeBefore) // Command Type: Before (2)
+	buf[2] = 0                       // Reserved
+	buf[3] = 0                       // Reserved
 	binary.BigEndian.PutUint64(buf[4:], toUnixNano(t))
 	_, err := c.conn.Write(buf[:])
 	if err != nil {
@@ -176,7 +186,7 @@ func (c *Client) Before(t time.Time) (Before, error) {
 		return Before{}, nil
 	}
 	version := buf[0]
-	typ := buf[1]
+	typ := CommandType(buf[1])
 	unsyncFlag := buf[2] != 0
 	before := buf[4] != 0
 	return Before{
@@ -193,10 +203,10 @@ func (c *Client) Before(t time.Time) (Before, error) {
 // after the latest error bound of the current system time.
 func (c *Client) After(t time.Time) (After, error) {
 	var buf [12]byte
-	buf[0] = 1 // Version
-	buf[1] = 3 // Command Type: After (3)
-	buf[2] = 0 // Reserved
-	buf[3] = 0 // Reserved
+	buf[0] = 1                      // Version
+	buf[1] = byte(CommandTypeAfter) // Command Type: After (3)
+	buf[2] = 0                      // Reserved
+	buf[3] = 0                      // Reserved
 	binary.BigEndian.PutUint64(buf[4:], toUnixNano(t))
 	_, err := c.conn.Write(buf[:])
 	if err != nil {
@@ -208,7 +218,7 @@ func (c *Client) After(t time.Time) (After, error) {
 		return After{}, nil
 	}
 	version := buf[0]
-	typ := buf[1]
+	typ := CommandType(buf[1])
 	unsyncFlag := buf[2] != 0
 	after := buf[4] != 0
 	return After{
