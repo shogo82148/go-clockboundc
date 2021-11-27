@@ -2,12 +2,21 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/shogo82148/go-clockboundc"
 )
 
 func main() {
-	c, err := clockboundc.New()
+	var path string
+	if len(os.Args) > 1 {
+		path = os.Args[1]
+	}
+	if path == "" {
+		path = clockboundc.DefaultSocketPath
+	}
+
+	c, err := clockboundc.NewWithPath(path)
 	if err != nil {
 		log.Fatal(err)
 	}
