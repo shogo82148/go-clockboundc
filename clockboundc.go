@@ -183,7 +183,7 @@ func (c *Client) Before(t time.Time) (Before, error) {
 
 	_, err = c.conn.Read(buf[:5])
 	if err != nil {
-		return Before{}, nil
+		return Before{}, err
 	}
 	version := buf[0]
 	typ := CommandType(buf[1])
@@ -215,7 +215,7 @@ func (c *Client) After(t time.Time) (After, error) {
 
 	_, err = c.conn.Read(buf[:5])
 	if err != nil {
-		return After{}, nil
+		return After{}, err
 	}
 	version := buf[0]
 	typ := CommandType(buf[1])
