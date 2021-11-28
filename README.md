@@ -2,6 +2,7 @@
 
 [![Test](https://github.com/shogo82148/go-clockboundc/actions/workflows/test.yml/badge.svg)](https://github.com/shogo82148/go-clockboundc/actions/workflows/test.yml)
 [![Go Reference](https://pkg.go.dev/badge/github.com/shogo82148/go-clockboundc.svg)](https://pkg.go.dev/github.com/shogo82148/go-clockboundc)
+[![Coverage Status](https://coveralls.io/repos/github/shogo82148/go-clockboundc/badge.svg?branch=main)](https://coveralls.io/github/shogo82148/go-clockboundc?branch=main)
 
 Golang Client for [ClockBound](https://github.com/aws/clock-bound).
 
